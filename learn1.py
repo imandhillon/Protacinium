@@ -1,6 +1,7 @@
 from __future__ import print_function
 from random import randint
 
+import os
 import numpy as np
 import scipy.io.wavfile as wav
 import wave
@@ -44,8 +45,30 @@ def rand_wav():
 	scaled = np.int16(data/np.max(np.abs(data)) * 32767)
 	wav.write('test.wav', 44100, scaled)
 
-rate, music = wav.read('./bangers/Damiano_Baldoni_-_Ive_not_fear.wav')
+def convert_folder_to_wav(directory, sample_rate=44100):
+	for file in os.listdir(directory):
+		fullfilename = directory+file
+		if file.endswith('.mp3'):
+			convert_mp3_to_wav(filename=fullfilename, sample_frequency=sample_rate)
+	return directory + 'wave/'
 
+def wav_to_np(filename):
+	data = wav.read(filename)
+	np_music = data[1].astype('float32') / 32767.0
+	return np_music, data[0]
+#borrowed from gruv. dont think it works as is. GRUV is on github for reference.
+def create_lstm_network(num_frequency_dimensions, num_hidden_dimensions, num_recurrent_units=1):
+	model = Sequential()
+	#This layer converts frequency space to hidden space
+	model.add(Dense(input_dim=num_frequency_dimensions, output_dim=num_hidden_dimensions))
+	for cur_unit in xrange(num_recurrent_units):
+		model.add(LSTM(input_dim=num_hidden_dimensions, output_dim=num_hidden_dimensions, return_sequences=True))
+	#This layer converts hidden space back to frequency space
+	model.add(Dense(input_dim=num_hidden_dimensions, output_dim=num_frequency_dimensions))
+	model.compile(loss='mean_squared_error', optimizer='rmsprop')
+	return model
+
+music, rate = wav_to_np('./bangers/Damiano_Baldoni_-_Ive_not_fear.wav')
 #flat_music = [item for sublist in music for item in sublist]
 #wav.write('new.wav', rate, music)
 
@@ -66,21 +89,22 @@ for ind in xrange(len(music)-n_prev):
 	X.append(x)
 	Y.append(y)
 
+print(x)
 seed = music[(randint(0,(len(music-n_prev)))):n_prev]
 
-
+#this isnt working. breaks at 'fit' call
 print('Building brain...')
 model = Sequential()
-model.add(LSTM(128, input_shape=(n_prev, 2), return_sequences=True))
+model.add(LSTM(1024, input_shape=(n_prev, 2), return_sequences=True))
 model.add(Dropout(0.2))
-model.add(LSTM(64, input_shape=(n_prev, 2), return_sequences=False))
+model.add(LSTM(1024, input_shape=(n_prev, 2), return_sequences=False))
 model.add(Dropout(0.2))
 model.add(Dense(2))
 model.add(Activation('linear'))
-print('1')
+print('Braining...')
 optimizer = RMSprop(lr=0.01)
 model.compile(loss='mse', optimizer='rmsprop')
-model.fit(X, Y, batch_size=300, epochs=400, verbose=1)
+model.fit(X, Y, batch_size=441000, epochs=5, verbose=2)
 print('nsjs')
 predict = []
 x = seed
