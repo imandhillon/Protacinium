@@ -15,7 +15,7 @@ def play_music():
 	#define stream chunk
 	chunk = 1024
 	#open a wav file
-	#f = wave.open(r"./bangers/Damiano_Baldoni_-_Ive_not_fear.wav","rb")
+	#f = wave.open(r"./notstatic/Damiano_Baldoni_-_Ive_not_fear.wav","rb")
 	f = wave.open(r"new.wav","rb")
 	#instantiate PyAudio
 	p = pyaudio.PyAudio()
@@ -40,18 +40,6 @@ def play_music():
 	#close PyAudio  
 	p.terminate()
 
-#borrowed from gruv. dont think it works as is. GRUV is on github for reference.
-def create_lstm_network(num_frequency_dimensions, num_hidden_dimensions, num_recurrent_units=1):
-	model = Sequential()
-	#This layer converts frequency space to hidden space
-	model.add(Dense(input_dim=num_frequency_dimensions, output_dim=num_hidden_dimensions))
-	for cur_unit in xrange(num_recurrent_units):
-		model.add(LSTM(input_dim=num_hidden_dimensions, output_dim=num_hidden_dimensions, return_sequences=True))
-	#This layer converts hidden space back to frequency space
-	model.add(Dense(input_dim=num_hidden_dimensions, output_dim=num_frequency_dimensions))
-	model.compile(loss='mean_squared_error', optimizer='rmsprop')
-	return model
-
 def rand_wav():
 	data = np.random.uniform(-1,1,44100) # 44100 random samples between -1 and 1
 	scaled = np.int16(data/np.max(np.abs(data)) * 32767)
@@ -67,6 +55,7 @@ def convert_folder_to_wav(directory, sample_rate=44100):
 def wav_to_np(filename):
 	data = wav.read(filename)
 	np_music = data[1].astype('float32') / 32767.0
+	print(np_music)
 	return np_music, data[0]
 
 def np_to_sample(music, block_size):
@@ -83,29 +72,37 @@ def np_to_sample(music, block_size):
 	return blocks
 
 def load_corpus(file, block_size):
+	y_np = np.empty
 	music, rate = wav_to_np(file)
 	x_t = np_to_sample(music, block_size)
-	#is list of numy arrays of numpy arrays of floats. NEED NUMPY ARRAY FORM
-	print((type(x_t)), type(x_t[1]), type(x_t[1][1]), type(x_t[1][1][1]))
-	y_t = x_t[1:] 						#If x, then y. Sorta
+	#is list of numpy arrays of numpy arrays of floats
+	#print((type(x_t)), type(x_t[1]), type(x_t[1][1]), type(x_t[1][1][1]))
+	y_t = x_t[1:]					#If x, then y. Sorta
 	y_t.append(np.zeros(block_size)) 	#make it fit
-	return x_t, y_t
 
+	y_left = y_t[:][:][:1]
+	y_right = y_t[:][:][1:2]
+	y_np = np.asarray(y_left)
+	y_right = np.asarray(y_right)
+	y_np = np.column_stack((y_np, y_right))
 
-music, rate = wav_to_np('./bangers/Damiano_Baldoni_-_Ive_not_fear.wav')
+	x_left = x_t[:][:][:1]
+	x_right = x_t[:][:][1:2]
+	x_np = np.asarray(x_left)
+	x_right = np.asarray(x_right)
+	x_np = np.column_stack((x_np, x_right))
+	#print(y_np)
+	return x_np, y_np
+
+music, rate = wav_to_np('./notstatic/Damiano_Baldoni_-_Ive_not_fear.wav')
 
 #wav.write('new.wav', rate, music)
 chunks_X = []
 chunks_Y = []
-X, Y_t = load_corpus('./bangers/Damiano_Baldoni_-_Ive_not_fear.wav', block_size=2048)
-#print(Y_t)
-shape = list(Y_t[0].shape)
-shape[:0] = [len(Y_t)]
-print(Y_t[0].shape, Y_t[1].shape, Y_t[2].shape)
-print(shape)
-Y = np.concatenate(Y_t).reshape([4394, 2])
+X, Y_t = load_corpus('./notstatic/Damiano_Baldoni_-_Ive_not_fear.wav', block_size=2048)
+print(type(Y_t), type(Y_t[0]), type(Y_t[0][0]), type(Y_t[0][0][0]))
 
-#This may improve results. But not sure if necessary yet
+#Not sure if necessary yet
 '''cur_seq = 0
 total_seq = len(X)
 print total_seq
@@ -113,30 +110,37 @@ print max_seq_len
 while cur_seq + max_seq_len < total_seq:
 	chunks_X.append(X[cur_seq:cur_seq+max_seq_len])
 	chunks_Y.append(Y[cur_seq:cur_seq+max_seq_len])
-	cur_seq += max_seq_len'''
+	cur_seq +x = seed #is empty...
+= max_seq_len'''
 
-block_size = 2048
-#this isnt working. breaks at 'fit' call
+#seed = X[:][738:748]
+#tries to do brain stuff
 print('Building brain...')
 model = Sequential()
-model.add(LSTM(1024, input_shape=(block_size, 2), return_sequences=True))
+model.add(LSTM(2048, input_shape=(4096, 2), return_sequences=True))
 model.add(Dropout(0.2))
-model.add(LSTM(1024, input_shape=(block_size, 2), return_sequences=False))
-model.add(Dropout(0.2))
+#model.add(LSTM(2048, input_shape=(4096, 2), return_sequences=False))
+#model.add(Dropout(0.2))
 model.add(Dense(2))
 model.add(Activation('linear'))
+
 print('Braining...')
 optimizer = RMSprop(lr=0.01)
 model.compile(loss='mse', optimizer='rmsprop')
-model.fit(X, Y_t, batch_size=441000, epochs=5, verbose=2)
-print('nsjs')
-prediction = [] 
-x = seed
-x = np.expand_dims(x, axis=0)
-print(x)
+model.fit(X, Y_t, batch_size=441000, epochs=1, verbose=2)
 
-for ind in xrange(441000):
-	preds = model.predict(x)
+print('Doing brain stuff...')
+prediction = []
+#x = seed #is empty...
+print(X)
+print('#######\n')
+
+for ind in xrange(40):
+	preds = model.predict(X)
+	print(preds)
+	print(len(preds))
+
+	#copy-pasta'd from somewhere. Does not seem to help in my case
 	x = np.squeeze(x)
 	x = np.concatenate((x, preds))
 	x = x[1:]
