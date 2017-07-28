@@ -94,9 +94,8 @@ def load_corpus(file, block_size):
 	#print(y_np)
 	return x_np, y_np
 
-music, rate = wav_to_np('./notstatic/Damiano_Baldoni_-_Ive_not_fear.wav')
-
 if __name__ == '__main__':
+	music, rate = wav_to_np('./notstatic/Damiano_Baldoni_-_Ive_not_fear.wav')
 	#wav.write('new.wav', rate, music)
 	chunks_X = []
 	chunks_Y = []
