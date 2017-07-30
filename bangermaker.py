@@ -1,22 +1,22 @@
-import tensormaker
+import recenttensor
 
-def make_brain(block_size, timestep=seq_len):
-	'''Want to rename seq_len, timestep'''
+def make_brain(timestep=215, block_size=2048):
+	'''Can fiddle with methods to try to get better results, quicker.'''
 	print('Building brain...\n')
 	model = Sequential()
-	model.add(LSTM(block_size, input_shape=(seq_len, block_size), return_sequences=True))
+	model.add(LSTM(block_size, input_shape=(timestep, block_size), return_sequences=True))
 	#model.add(Dropout(0.2))
 	model.add(Dense(block_size))
 	#model.add(Activation('linear'))
 	return model
 
-def train_brain(model, x_data, y_data, nb_epochs=1):
+def train_brain(model, x_data, y_data, nb_epochs=10):
 	print('Braining...\n')
 	optimizer = RMSprop(lr=0.01)
 	model.compile(loss='mse', optimizer='rmsprop')
 	model.fit(x_data, y_data, batch_size=10000, epochs=nb_epochs, verbose=2)
 	#Make it save weights
-	return
+	return model
 
 def gimme_inspiration(seed_len, data_train):
 	'''From GRUV'''
@@ -28,8 +28,8 @@ def gimme_inspiration(seed_len, data_train):
 	inspiration = np.reshape(seed, (1, seed.shape[0], seed.shape[1]))
 	return inspiration
 
-def compose(x_data):
-	'''Could add length of composition (roughly)'''
+def compose(model, x_data):
+	'''Could add choice of length of composition (roughly)'''
 	print('Doing brain stuff...\n')
 	generation = []
 	muse = gimme_inspiration(1, x_data)
@@ -37,3 +37,5 @@ def compose(x_data):
 		preds = model.predict(muse)
 		print(preds)
 		print(len(preds), len(preds[0]), len(preds[0][0]))
+		generation.append(preds)
+	return generation

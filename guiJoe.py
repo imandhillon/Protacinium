@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from os import listdir
 from os.path import isfile, join
 import sys
-import fancyschmancystaticgenerator
+import tensormaker
 
 
 class BangerWindow(QtWidgets.QMainWindow):
