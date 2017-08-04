@@ -1,18 +1,19 @@
 from __future__ import print_function
 from random import randint
-from os import listdir
-from os.path import isfile, join
-from keras.models import load_model
-from PyQt5 import QtWidgets, QtGui, QtCore
-import h5py
 #from keras.backend import manual_variable_initialization manual_variable_initialization(True)
 #Might need for saving weights/model
 
 import os
 import numpy as np
+import tensorflow as tf
+from tensorflow.contrib import rnn
 import scipy.io.wavfile as wav
 import wave
 import pyaudio
+import itertools
+from tempfile import TemporaryFile
+from collections import Counter
+
 from keras.layers import LSTM, Dense, Activation, Dropout
 from keras.preprocessing import sequence
 from keras.models import Sequential
@@ -20,18 +21,13 @@ from keras.optimizers import RMSprop
 
 '''Relevant comments inside 'run()' method at bottom'''
 
-globalfile = ""
-
-def play_music(wavfile='new.wav'):
+def play_music(wavfile=''):
 	'''From stackoverflow'''
 	#define stream chunk
-	print ("got here")
 	chunk = 1024
 	#open a wav file
-	currDir = os.getcwd()
-	path = currDir + '/Music/' + wavfile
-	
-	f = wave.open(path,"rb")
+	#f = wave.open(r"./notstatic/Damiano_Baldoni_-_Ive_not_fear.wav","rb")
+	f = wave.open(r"new.wav","rb")
 	#instantiate PyAudio
 	p = pyaudio.PyAudio()
 	#open stream
@@ -55,14 +51,10 @@ def play_music(wavfile='new.wav'):
 	#close PyAudio  
 	p.terminate()
 
-def write_np_as_wav(X, filename='new.wav', sample_rate=44100):
+def write_np_as_wav(X, sample_rate=44100, filename='new.wav'):
 	Xnew = X * 32767.0
 	Xnew = Xnew.astype('int16')
 	wav.write(filename, sample_rate, Xnew)
-	currDir = os.getcwd()
-	filepath = currDir + '/' + filename
-	newPath = currDir + '/Music/' + filename
-	os.rename(filepath, newPath)
 	return
 
 def convert_sample_blocks_to_np_audio(blocks):
@@ -89,11 +81,8 @@ def wav_dir_to_np(directory, sample_rate=44100):
 	return directory + 'wave/'
 
 def wav_to_np(filename):
-	print (filename)
-	filename = str(filename)
 	data = wav.read(filename)
 	np_music = data[1].astype('float32') / 32767.0
-	np_music = np_music.sum(axis=1)/2
 	return np_music, data[0]
 
 def np_to_sample(music, block_size=2048):
@@ -124,13 +113,94 @@ def serialize_corpus(x_train, y_train, seq_len=215):
 
 	return seqs_x, seqs_y
 
-def make_tensors(music, seq_len=215, block_size=2048, out_file='train'):
+def str_to_list(s):
+	L = [float(x) for x in s.split(',')]
+	return L
+
+def make_dict(n_list, keys):
+	blks = {}
+	for n, k in zip(n_list, keys):
+		blks[k] = n
+	return blks
+
+def make_tensors(file, seq_len=215, block_size=2048, out_file='train'):
 	'''Have it handle directories *********'''
+	seq_blk = seq_len*block_size
+	music, rate = wav_to_np(file)
+	music = music.sum(axis=1)/2
+
+	#good_np = np.array([])
+	#x_t = []
+
+	#for m in xrange(music.shape[0]/seq_blk)
+	'''if music.shape[0]%seq_blk > 0:
+		padding = np.zeros((seq_blk - music.shape[0]%(seq_blk)))
+		good_np = np.resize(music, len(music) + len(padding))
+		good_np[:len(music)] = music
+	x_bysequence = np.array(np.split(good_np, (seq_len*block_size)))'''
+
+	# Not right :/
+	'''for n in x_bysequence:
+		print('s')
+		if n.shape[0]%block_size != 0:
+			padding = np.zeros((block_size - n.shape[0]%block_size))
+			x_padded = np.resize(n, len(n) + len(padding))
+			x_padded[:len(n)] = np.array(n)
+		exsh = np.array(np.split(x_padded, block_size))
+		np.array(x_t.append(exsh))
+	print(x_t.shape)'''
+
 
 	x_t = np_to_sample(music, block_size)
-	y_t = x_t[1:]					#If x, then y. Sorta
+
+	'''file = TemporaryFile()
+	music_atoms = {}
+
+	npfile = np.load(file)
+	for block in x_t:
+		np.savez(file)
+		music_atoms[str(list(block))] = len(music_atoms)
+	bw_musics = {v: k for k, v in music_atoms.iteritems()}
+
+	npfile = np.load(file)
+
+
+	nb_samples = len(bw_musics)
+	print(str(nb_samples) + '\n+++++++++++++++++++')
+	print(bw_musics[5401])
+	listed = np.array(map(np.float32, bw_musics[5401].split(',')))
+	print(listed)'''
+
+	tmp = TemporaryFile()
+	nb_samples = len(x_t)
+
+	keyvals = []
+	for i in xrange(len(x_t)):
+		keyvals.append(i)
+
+	np.savez(tmp, x_t)
+
+	tones = make_dict(x_t, keyvals)	# Python's magic.
+
+	#tonex = np.array(tones.values())
+
+
+	'''soundx = np.zeros(x_t[0].shape)
+	for i in tonex:
+		soundx = np.concatenate((soundx, i))'''
+	
+	
+
+
+	y_t = x_t[1:]
+	x_sorted = np.unique(x_t, return_counts=True) # Come back to this
+
+
+
 	y_t.append(np.zeros(block_size)) 	#make it fit
-	seqs_x, seqs_y = serialize_corpus(x_t, y_t)
+	seqs_x, seqs_y = serialize_corpus(x_t, y_t, seq_len)
+
+
 
 	'''Pretty much taken from GRUV. '''
 	nb_examples = len(seqs_x)
@@ -173,11 +243,7 @@ def make_tensors(music, seq_len=215, block_size=2048, out_file='train'):
 	#Then take the closest sound block found in corpus 2
 	#So now you may produce music with the stylings of Bach and the sounds of Jimi Hendrix
 	#The comments inside 'run' make more sense
-	#print('full corpus:', x_data, x_data.shape)
-	'''for x in xrange(2):
-		print(x_data[x], '\n')
-	for x in xrange(2):
-		print(y_data[x], '\n')'''
+
 	
 	mean_x = np.mean(np.mean(x_data, axis=0), axis=0) #Mean across num examples and num timesteps
 	std_x = np.sqrt(np.mean(np.mean(np.abs(x_data-mean_x)**2, axis=0), axis=0)) # STD across num examples and num timesteps
@@ -201,7 +267,7 @@ def make_tensors(music, seq_len=215, block_size=2048, out_file='train'):
 		print(y_data[x], '\n')'''
 
 	print('mean/std shape: ', mean_x.shape, '\n', std_x.shape)
-	return x_data, y_data
+	return x_data, y_data, nb_samples
 
 #Copied this code into bangermaker.py
 def make_brain(timestep=215, block_size=2048):
@@ -214,7 +280,7 @@ def make_brain(timestep=215, block_size=2048):
 	#model.add(Activation('linear'))
 	return model
 
-def train_brain(model, x_data, y_data, nb_epochs=1):
+def train_brain(model, x_data, y_data, nb_epochs=9):
 	print('Braining...\n')
 	optimizer = RMSprop(lr=0.01)
 	model.compile(loss='mse', optimizer='rmsprop')
@@ -222,9 +288,9 @@ def train_brain(model, x_data, y_data, nb_epochs=1):
 	#Make it save weights
 	return model
 
-def gimme_inspiration(seed_len, data_train):
-	'''From GRUV'''
-	#What if you increase seed len?
+def gimme_inspiration(data_train, seed_len=1):
+	'''From GRUV because I do not know how predict function works yet.'''
+
 	nb_examples, seq_len = data_train.shape[0], data_train.shape[1]
 	r = np.random.randint(data_train.shape[0])
 	seed = np.concatenate(tuple([data_train[r+i] for i in xrange(seed_len)]), axis=0)
@@ -236,79 +302,79 @@ def compose(model, x_data):
 	'''Could add choice of length of composition (roughly)'''
 	print('Doing brain stuff...\n')
 	generation = []
-	muse = gimme_inspiration(1, x_data)
+
+	muse = gimme_inspiration(x_data)
 	for ind in xrange(1):
-		preds = model.predict(muse)
-		#print(preds)
-		#print(len(preds), len(preds[0]), len(preds[0][0]))
-		generation.append(preds)
+		try:
+			preds = model.predict(muse, batch_size=x_data.shape, verbose=2)
+		except:
+			try:
+				print("it's muse")
+				preds = model.predict(muse, batch_size=muse.shape, verbose=2)
+			except:
+				print("try 3")
+				preds = model.predict(muse, verbose=2)
+
+		print(preds)
+		print(len(preds), len(preds[0]), len(preds[0][0]))
+		generation.extend(preds)
 	return generation
 
-def run(x):
-	direc = x
-	#print (direc)
+def run():
 	'''option = raw_input('Would you like to name the output file? (y/n):')
 	if option is 'y'.lower():
 		out_file = raw_input('Enter filename:')
 	else:'''
 	out_file = 'train'
 
-	block_size = 2048
-	seq_len = 215
+	block_size = 3000
+	seq_len = 100	# 215 ~= 10secs // 430 ~= 20secs // 860 ~= 40secs
+
+	hid_layers = 512
 	'''Select directory of corpus. Ask if want to use second directory
 	for sound samples. (Experiment to improve results/do something cool)
 	Would work best if genres are kept contained. Maybe later, handle m4a/mp3 to wav.
 	Need this to work with gui, so Austin can handle this part.
-	*****(pseudo-code)***** '''
-	
-	loader = QtWidgets.QMessageBox.question(None, 'ModelLoad', "Load the existing model?", QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.No)
-		
-	if loader == QtWidgets.QMessageBox.Yes:
-		check = True
-		modelLoad = QtWidgets.QFileDialog.getOpenFileName(None, 'Open Model', '')
-		modelLoad = modelLoad[0]
-	elif loader == QtWidgets.QMessageBox.No:
-		check = False
-	
 
-	onlyFiles = [f for f in listdir(x) if isfile(join(x, f))]
-		
-	
+	*****(pseudo-code)*****
 	corpus = []
-	for file in onlyFiles:
-		if file.endswith('.wav'):
-			#print (file)
-			music, rate = wav_to_np(direc + '/' + file)
-			corpus.extend(music)
-			
-	corpus = np.array(corpus)
+	for file in dir:
+		if file.endswith(.wav):
+			music, rate = wav_to_np(file)
+			music = music.sum(axis=1)/2
+			corpus.extend(music)'''
 
-	x_data, y_data = make_tensors(corpus) 
-	
-	if check == True: #load existing?
-		print ("Loading model.....\n")
-		model = load_model(modelLoad)
-		model.save(modelLoad)
-		currDir = os.getcwd()
-		filepath = currDir + '/' + modelLoad
-		newPath = currDir + '/Models/' + modelLoad
-		os.rename(filepath, newPath)
-		
-		
-			
-	else:	
-		model = make_brain(seq_len, block_size)
-		model = train_brain(model, x_data, y_data)
-		model.save('newmodel.h5')
-		currDir = os.getcwd()
-		filepath = currDir + '/newmodel.h5'
-		newPath = currDir + '/Models/newmodel.h5'
-		os.rename(filepath, newPath)
-		
-	
-	
-	
-	banger = compose(model, x_data)
+	# Full credit to Rowel Atienza. I do not currently know how to use tf... :(
+
+
+	x = tf.placeholder('float32', [None, seq_len, 1])
+
+	x_data, y_data, psbl_sounds = make_tensors('./notstatic/danceoflife.wav', seq_len)
+
+	y = tf.placeholder('float32', [None, psbl_sounds])
+
+	weights = {out_file: tf.Variable(tf.random_normal([hid_layers, psbl_sounds]))}
+	biases = {out_file: tf.Variable(tf.random_normal([psbl_sounds]))}
+
+	x = tf.reshape(x, [-1, seq_len])
+
+	x = tf.split(x, seq_len, 1)
+
+	# 4 layer LSTM
+	rnn_cell = rnn.MultiRNNCell([rnn.BasicLSTMCell(hid_layers),rnn.BasicLSTMCell(hid_layers),
+								 rnn.BasicLSTMCell(hid_layers),rnn.BasicLSTMCell(hid_layers)])
+
+	outputs, states = rnn.static_rnn(rnn_cell, x, dtype=tf.float32)
+
+
+
+
+	# ######################################
+	'''model = make_brain(seq_len, block_size)
+	model = train_brain(model, x_data, y_data)
+	banger = compose(model, x_data)'''
+	#########################################
+
 	#If(set to use sound_samples)
 	#Now grab corpus 2
 	#increase block size (I'm thinking 5012) for both vectors. For now, leave it as is.
@@ -317,16 +383,19 @@ def run(x):
 	#Concatenate closest relative variance block from sound_samples to new list
 	#For now, just get variance. Need to figure out how to get relative variance
 	#Maybe to do with mean variance for overall piece. Will try to math later.
-	
+	#Take a derivative at around the center of each block
+
 	#print(banger, '**********\n', banger.shape, '\n')
-	banger = convert_sample_blocks_to_np_audio(banger[0][0]) #Not final, but works for now
-	#print(banger) #			Should now be a flat list
-	
-	text, okPressed = QtWidgets.QInputDialog.getText(None, "Name new wave file","File Name:", QtWidgets.QLineEdit.Normal, "")
-	
-	banger = write_np_as_wav(banger, text) 
-	#play_music()
-	#print('\n\nWas this a banger (or at least an improvement)?')
+	try:
+		banger = convert_sample_blocks_to_np_audio(banger[0][0]) #Not final, but works for now
+	except:
+		print('exception convert')
+		banger = convert_sample_blocks_to_np_audio(banger[0])
+
+	print(banger) #			Should now be a flat list
+	banger = write_np_as_wav(banger)
+	play_music()
+	print('\n\nWas it a banger (or at least an improvement)?')
 
 	#		***This one next***
 	#Now user may evaluate (Thumbs up/down) or choose to exit app. Save weights for model before exit
@@ -337,7 +406,7 @@ def run(x):
 	#Save weights for model each time. Naming models would become relevant when there are multiple
 	#trained for various corpora. For now, just the main model. Handle saving model after we 
 	#get it to update/retrain model.
-	return text
+	return
 
 
 
