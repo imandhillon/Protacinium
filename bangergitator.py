@@ -217,7 +217,7 @@ def compose(model, x_data):
 def run():
 	out_file = 'train'
 	'''					sample rate * clip len / seq_len '''
-	block_size = 2700	# Around min # of samples for human to (begin to) percieve a tone
+	block_size = 2700	# Around min # of samples for human to (begin to) percieve a tone at 16Hz
 	seq_len = 215
 
 
@@ -228,7 +228,10 @@ def run():
 			music, rate = wav_to_np(file)
 			music = music.sum(axis=1)/2
 			corpus.extend(music)'''
-	x_data, y_data = make_tensors('./notstatic/danceoflife.wav', seq_len)
+			
+	x_data, y_data = make_tensors('./notstatic/danceoflife.wav', seq_len, block_size)
+
+
 	model = make_brain(seq_len, block_size)
 	model = train_brain(model, x_data, y_data)
 	banger = compose(model, x_data)
@@ -241,7 +244,6 @@ def run():
 	#Concatenate closest relative variance block from sound_samples to new list
 	#For now, just get variance. Need to figure out how to get relative variance
 	#Maybe to do with mean variance for overall piece. Will try to math later.
-	#Take a derivative at around the center of each block
 
 	banger = convert_sample_blocks_to_np_audio(banger[0]) #Not final, but works for now
 	print(banger) #			Should now be a flat list
@@ -258,7 +260,7 @@ def run():
 	#trained for various corpora. For now, just the main model. Handle saving model after we 
 	#get it to update/retrain model.
 
-	'''Will add CNN classifier after converting from Keras to Tensorflow to use generative-adversarial model
+	'''Will add CNN classifier after converting from Keras to Tensorflow to use generative-adversarial model.
 	That was a temporary idea to use for turning the project.'''
 
 	return
