@@ -1,28 +1,3 @@
-'''
-Intent is to go on to add a cnn (or a few) to identify feaures of songs
-based in music theory. I would like it to be able to identify elements in 
-music, such as perhaps, instrument(s), time sigs, chord progression, 
-note duration/bmp, and other musical elements and their relative 
-placement in the song to keep stats on what
-is 'valid' behavior: where the corpus (softly) determines the range of 'valid' with whatever 
-specs are calculated for it. 
-	Looking into Euclidean strings/algorithm.
-	http://www-cgrl.cs.mcgill.ca/~godfried/rhythm-and-mathematics.html
-		------------------
-Note generation as described in this HW assignemnt from Stanford. I might just do the whole assignemnt
-for the tools I would end up with in it. 
-	http://nifty.stanford.edu/2010/zingaro-song-generator/assignment.html
-		------------------
-Switching over to pure tensorflow. Maybe to numpy at some point. If one is more efficient,
-I will use it.
-Doing the numpy thing so I can learn, regardless.
-		------------------
-Add functionality to sound swap. Described below.
-		------------------
-Add cnn to detect 'plagiarism' or overfitting. Allow user to rate output. 
-Keep stats on user preferences.
-		------------------
-'''
 
 from __future__ import print_function
 from random import randint
@@ -240,7 +215,7 @@ def run():
 	model = train_brain(model, x_data, y_data)
 	masterpiece = compose(model, x_data)
 
-	#If(set to use sound_samples)			# Original idea in bottom-most comment block
+	#If(set to use sound_samples)			
 	#Now grab corpus 2
 	#increase block size (I'm thinking 5012) for both vectors. For now, leave it as is.
 	#replace blocks from masterpiece with blocks from sound_samples
@@ -271,26 +246,3 @@ def run():
 
 if __name__ == '__main__':
 	run()
-
-
-
-	#----------Idea Time----------
-	#Bring a second corpus or library into ndarray form and cut to blocks
-	#Run each block of generated sequence against each of second corpus
-	#calculate difference in mean and/or variance (means gets precedence) 
-	#(if mean and variance of any two+ blocks are same, they might be the same sound and 
-	#   should be deleted)
-	#The smallest difference block will be taken from corpus two and appended onto
-	#output vector to be converted to wav and played and rated
-
-	#Will want to reshape so 'blocks' are, say 1/8 or 1/4 of a second ***
-	#if the frequencies produced by one instrument are inherently higher or lower,
-	#results would suck. Normalize frequencies? 
-	#Add or subtract the difference in mean frequencies. 
-	#****Mean is theoretically 0 because these are points of a soundwave.
-	#Instead, find variance... make output vector closer to corpus 2 (...?...)
-	#Leave corpus 2 alone, of course.
-	#Should theoretically preserve rhythm of generation (based on corpus 1)
-	#Then take the closest sound block found in corpus 2
-	#So now you may produce music with the stylings of Bach and the sounds of Jimi Hendrix
-	#The comments inside 'run' make more sense
