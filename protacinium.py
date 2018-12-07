@@ -111,8 +111,8 @@ def make_tensors(file, seq_len=215, block_size=2048, out_file='train'):
 		pass
 
 	x_t = np_to_sample(music, block_size)
-	y_t = x_t[1:]					#If x, then y. Sort of
-	y_t.append(np.zeros(block_size)) 	#make it fit
+	y_t = x_t[1:]					
+	y_t.append(np.zeros(block_size)) 	
 	seqs_x, seqs_y = serialize_corpus(x_t, y_t, seq_len)
 
 	'''Pretty much taken from GRUV. '''
@@ -120,7 +120,7 @@ def make_tensors(file, seq_len=215, block_size=2048, out_file='train'):
 
 	print('\nCalculating mean and variance and saving data\n')
 	x_data = np.array(seqs_x)
-	y_data = np.array(seqs_y) #		This is questionable...
+	y_data = np.array(seqs_y)
 
 	for examples in xrange(nb_examples):
 		for seqs in xrange(seq_len):
