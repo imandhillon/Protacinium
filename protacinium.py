@@ -239,8 +239,8 @@ def run():
 	#trained for various corpora. For now, just the main model. Handle saving model after we 
 	#get it to update/retrain model.
 
-	'''Will add CNN classifier after converting from Keras to Tensorflow to use generative-adversarial model.
-	That was a temporary idea to use for turning the project.'''
+	'''Add CNN classifier after converting from Keras to Tensorflow to use generative-adversarial model.
+	'''
 
 	return
 
