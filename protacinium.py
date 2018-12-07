@@ -12,7 +12,6 @@ from keras.preprocessing import sequence
 from keras.models import Sequential
 from keras.optimizers import RMSprop
 
-'''Relevant comments inside 'run()' method at bottom'''
 
 def play_music(wavfile=''):
 	#define stream chunk
